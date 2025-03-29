@@ -1,0 +1,106 @@
+.background{
+    background-color: #286E6C;
+}
+
+.img{
+    height: auto;
+    width: clamp(13vh, 13vw, 20vw);
+}
+
+.bulan{
+    height: 20vh;
+}
+
+.bintang{
+    width: 10vh;
+}
+
+.bottom{
+    height: auto;
+    width: 20vh;
+}
+
+.flip-vertical {
+    transform: scaleX(-1);
+}
+
+.oleo-script-regular {
+    font-family: "Oleo Script", system-ui;
+    font-size: 5vh;
+    font-style: normal;
+    margin-top: 2vh;
+    color: #ECE4D7;
+}
+  
+.oleo-script-bold {
+    font-family: "Oleo Script", system-ui;
+    font-style: normal;
+    font-size: 8vh;
+    color: #ECE4D7;
+}
+
+.poppins-regular {
+    font-family: "Poppins", sans-serif;
+    color: #ECE4D7;
+    font-size: clamp(2vh, 4vw, 30px);
+    font-style: normal;
+    margin-bottom: 3vh;
+}
+
+.floating-btn {
+    position: fixed;
+    bottom: 5%;
+    right: 5%;
+    background-color: #9DBFAE   ;
+    color: #286E6C;
+    border: none;
+    width: clamp(4vh, 5vw, 6vw);
+    height: clamp(4vh, 5vw, 6vw);
+    border-radius: 50%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.floating-btn:hover {
+    background-color: #fff7f2;
+}
+
+.flash{
+    --animate-duration: 10s;
+}
+
+.hu__hu__ { animation: hu__hu__ infinite 4s ease-in-out }
+@keyframes hu__hu__ {
+    50% { transform: translateY(30px) }
+}
+
+.hu__hu__1 { animation: hu__hu__ infinite 12s ease-in-out }
+@keyframes hu__hu__ {
+    50% { transform: translateY(15px) }
+}
+
+.typing {
+    /* text-align: center; */
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid #ECE4D7;
+    display: inline-block;
+    animation: typing 3s steps(19, end) forwards, cursor 0.5s steps(12, end) infinite;}
+
+@keyframes typing {
+    from { width: 0 }
+    to { width: 100%; border-right: none; }
+}
+@keyframes cursor {
+    50% { border-color: transparent }
+}
+
+#canvas{
+
+}
+  
