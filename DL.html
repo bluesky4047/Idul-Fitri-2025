@@ -74,6 +74,25 @@
             border-bottom: 1px solid #e9ecef;
             padding-bottom: 15px;
         }
+        #auth-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #sync-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .sync-online {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .sync-offline {
+            background-color: #e74c3c;
+            color: white;
+        }
         @media (max-width: 576px) {
             .countdown-time {
                 font-size: 0.85rem;
@@ -97,7 +116,72 @@
             <div class="col-lg-8 col-md-10 col-sm-12">
                 <div class="page-header text-center">
                     <h1 class="display-5">Aplikasi Multiple Countdown</h1>
-                    <p class="text-muted">Kelola berbagai countdown dalam satu aplikasi</p>
+                    <p class="text-muted">
+                        Kelola berbagai countdown dalam satu aplikasi
+                        <span id="sync-status" class="sync-offline">Offline</span>
+                    </p>
+                </div>
+                
+                <div id="auth-container" class="countdown-container p-4 mb-4">
+                    <div id="login-section">
+                        <h4 class="mb-3">Login untuk Sinkronisasi</h4>
+                        <p class="text-muted mb-4">Masuk untuk menyimpan countdown di semua perangkat Anda</p>
+                        <form id="login-form" class="row g-3">
+                            <div class="col-md-6">
+                                <input type="email" class="form-control" id="email" placeholder="Email" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="password" class="form-control" id="password" placeholder="Password" required>
+                            </div>
+                            <div class="col-12 d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="login-btn">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="register-toggle-btn">
+                                    <i class="fas fa-user-plus me-2"></i>Belum punya akun? Daftar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div id="register-section" style="display: none;">
+                        <h4 class="mb-3">Daftar Akun Baru</h4>
+                        <p class="text-muted mb-4">Buat akun untuk menyimpan countdown di semua perangkat</p>
+                        <form id="register-form" class="row g-3">
+                            <div class="col-12">
+                                <input type="email" class="form-control" id="reg-email" placeholder="Email" required>
+                            </div>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="reg-password" placeholder="Password" required>
+                            </div>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="reg-confirm-password" placeholder="Konfirmasi Password" required>
+                            </div>
+                            <div class="col-12 d-grid gap-2">
+                                <button type="submit" class="btn btn-success" id="register-btn">
+                                    <i class="fas fa-user-plus me-2"></i>Daftar
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="login-toggle-btn">
+                                    <i class="fas fa-arrow-left me-2"></i>Kembali ke Login
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div id="user-section" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="m-0">Selamat Datang</h4>
+                            <div>
+                                <span id="user-email" class="me-3 text-muted"></span>
+                                <button id="logout-btn" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-success">
+                            <i class="fas fa-check-circle me-2"></i>Data sinkronisasi aktif - Countdown Anda tersimpan di cloud
+                        </p>
+                    </div>
                 </div>
                 
                 <div class="countdown-container p-4">
@@ -143,16 +227,214 @@
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Firebase App (core Firebase SDK) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.js"></script>
+    <!-- Firebase Realtime Database -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.js"></script>
+    
     <script>
-        // Array untuk menyimpan semua countdown
-        let countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+        // Konfigurasi Firebase - Ganti dengan konfigurasi Anda sendiri
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQ9X8icHndBZSBUWUocL-vNocPjCPq9-0",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "https://console.firebase.google.com/u/0/project/countdown-6e46e/database/countdown-6e46e-default-rtdb/data/~2F",
+            projectId: "countdown-6e46e",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "420820902041"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        
+        // Variables
+        let countdowns = [];
         let editingId = null;
-
-        // Fungsi untuk menyimpan countdowns ke localStorage
-        function saveCountdowns() {
-            localStorage.setItem('countdowns', JSON.stringify(countdowns));
+        let currentUser = null;
+        let isOnline = false;
+        const syncStatus = document.getElementById('sync-status');
+        
+        // Toggle between login and register form
+        document.getElementById('register-toggle-btn').addEventListener('click', function() {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('register-section').style.display = 'block';
+        });
+        
+        document.getElementById('login-toggle-btn').addEventListener('click', function() {
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('register-section').style.display = 'none';
+        });
+        
+        // Register new user
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                alert('Password tidak sama. Silakan coba lagi.');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Registered
+                    document.getElementById('register-form').reset();
+                    toggleAuthSection(userCredential.user);
+                })
+                .catch((error) => {
+                    alert('Gagal mendaftar: ' + error.message);
+                });
+        });
+        
+        // Login user
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Logged in
+                    document.getElementById('login-form').reset();
+                    toggleAuthSection(userCredential.user);
+                })
+                .catch((error) => {
+                    alert('Gagal login: ' + error.message);
+                });
+        });
+        
+        // Logout user
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            auth.signOut()
+                .then(() => {
+                    toggleAuthSection(null);
+                    // Kembali ke data lokal
+                    countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+                    renderCountdowns();
+                })
+                .catch((error) => {
+                    alert('Gagal logout: ' + error.message);
+                });
+        });
+        
+        // Check auth state change
+        auth.onAuthStateChanged(function(user) {
+            toggleAuthSection(user);
+            
+            if (user) {
+                // User logged in
+                currentUser = user;
+                syncWithFirebase();
+            } else {
+                // User logged out
+                currentUser = null;
+                // Gunakan data lokal
+                countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+                renderCountdowns();
+            }
+        });
+        
+        // Toggle auth section based on login status
+        function toggleAuthSection(user) {
+            if (user) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('register-section').style.display = 'none';
+                document.getElementById('user-section').style.display = 'block';
+                document.getElementById('user-email').textContent = user.email;
+                
+                syncStatus.textContent = 'Online';
+                syncStatus.classList.remove('sync-offline');
+                syncStatus.classList.add('sync-online');
+                isOnline = true;
+            } else {
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('register-section').style.display = 'none';
+                document.getElementById('user-section').style.display = 'none';
+                
+                syncStatus.textContent = 'Offline';
+                syncStatus.classList.remove('sync-online');
+                syncStatus.classList.add('sync-offline');
+                isOnline = false;
+            }
         }
-
+        
+        // Sync with Firebase
+        function syncWithFirebase() {
+            if (!currentUser) return;
+            
+            const userCountdownsRef = database.ref('countdowns/' + currentUser.uid);
+            
+            // Ambil data dari Firebase
+            userCountdownsRef.once('value')
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        // Ada data di Firebase
+                        countdowns = Object.values(snapshot.val());
+                    } else {
+                        // Tidak ada data di Firebase, gunakan data lokal jika ada
+                        countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+                        // Upload data lokal ke Firebase
+                        if (countdowns.length > 0) {
+                            saveToFirebase();
+                        }
+                    }
+                    renderCountdowns();
+                })
+                .catch((error) => {
+                    console.error("Error saat mengambil data: ", error);
+                    // Fallback ke data lokal
+                    countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+                    renderCountdowns();
+                });
+            
+            // Listen untuk perubahan real-time
+            userCountdownsRef.on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    countdowns = Object.values(snapshot.val());
+                    renderCountdowns();
+                    // Update juga di localStorage untuk cadangan
+                    localStorage.setItem('countdowns', JSON.stringify(countdowns));
+                }
+            });
+        }
+        
+        // Simpan countdowns ke Firebase
+        function saveToFirebase() {
+            if (!currentUser) {
+                // Jika tidak login, simpan ke localStorage saja
+                localStorage.setItem('countdowns', JSON.stringify(countdowns));
+                return;
+            }
+            
+            const userCountdownsRef = database.ref('countdowns/' + currentUser.uid);
+            
+            // Konversi array ke objek dengan ID sebagai key
+            const countdownsObj = {};
+            countdowns.forEach(countdown => {
+                countdownsObj[countdown.id] = countdown;
+            });
+            
+            // Simpan ke Firebase
+            userCountdownsRef.set(countdownsObj)
+                .then(() => {
+                    // Simpan juga ke localStorage untuk cadangan
+                    localStorage.setItem('countdowns', JSON.stringify(countdowns));
+                })
+                .catch((error) => {
+                    alert('Gagal menyimpan data: ' + error.message);
+                    // Simpan ke localStorage sebagai fallback
+                    localStorage.setItem('countdowns', JSON.stringify(countdowns));
+                });
+        }
+        
         // Fungsi untuk menambah countdown baru
         document.getElementById('countdown-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -187,7 +469,13 @@
                 countdowns.push(newCountdown);
             }
             
-            saveCountdowns();
+            // Simpan data - to Firebase if online, to localStorage if offline
+            if (isOnline) {
+                saveToFirebase();
+            } else {
+                localStorage.setItem('countdowns', JSON.stringify(countdowns));
+            }
+            
             renderCountdowns();
             this.reset();
         });
@@ -195,7 +483,6 @@
         // Fungsi untuk menampilkan semua countdown
         function renderCountdowns() {
             const countdownsContainer = document.getElementById('countdowns');
-            const emptyState = document.getElementById('empty-state');
             
             if (countdowns.length === 0) {
                 countdownsContainer.innerHTML = `
@@ -316,10 +603,16 @@
 
         // Fungsi untuk menghapus countdown
         function deleteCountdown(id) {
-            // Gunakan konfirmasi Bootstrap jika tersedia, jika tidak gunakan confirm() biasa
             if (confirm('Apakah Anda yakin ingin menghapus countdown ini?')) {
                 countdowns = countdowns.filter(cd => cd.id !== id);
-                saveCountdowns();
+                
+                // Simpan perubahan
+                if (isOnline) {
+                    saveToFirebase();
+                } else {
+                    localStorage.setItem('countdowns', JSON.stringify(countdowns));
+                }
+                
                 renderCountdowns();
                 
                 if (editingId === id) {
@@ -333,6 +626,10 @@
         }
 
         // Inisialisasi
+        // Ambil data dari localStorage untuk pengguna yang belum login
+        if (!currentUser) {
+            countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+        }
         renderCountdowns();
         
         // Update countdown setiap detik
@@ -341,6 +638,22 @@
         // Membuat fungsi global agar bisa dipanggil dari dalam HTML
         window.editCountdown = editCountdown;
         window.deleteCountdown = deleteCountdown;
+        
+        // Status koneksi
+        const connectedRef = database.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true && currentUser) {
+                syncStatus.textContent = "Online";
+                syncStatus.classList.remove("sync-offline");
+                syncStatus.classList.add("sync-online");
+                isOnline = true;
+            } else {
+                syncStatus.textContent = "Offline";
+                syncStatus.classList.remove("sync-online");
+                syncStatus.classList.add("sync-offline");
+                isOnline = false;
+            }
+        });
     </script>
 </body>
 </html>
