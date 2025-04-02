@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Multiple Countdown</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .countdown-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .countdown-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .countdown-list {
+            margin-top: 30px;
+        }
+        .countdown-item {
+            background-color: #f1f5f9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .countdown-info {
+            flex-grow: 1;
+        }
+        .countdown-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .countdown-time {
+            font-size: 16px;
+            color: #555;
+        }
+        .countdown-actions {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.delete {
+            background-color: #e74c3c;
+        }
+        button.delete:hover {
+            background-color: #c0392b;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .edit-form {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dealine Countdown</h1>
+    
+    <div class="countdown-container">
+        <h2>Tambah Countdown Baru</h2>
+        <form id="countdown-form" class="countdown-form">
+            <div class="form-group">
+                <label for="title">Judul Countdown:</label>
+                <input type="text" id="title" required placeholder="Masukkan judul">
+            </div>
+            
+            <div class="form-group">
+                <label for="date">Tanggal:</label>
+                <input type="date" id="date" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="time">Waktu:</label>
+                <input type="time" id="time" required>
+            </div>
+            
+            <div class="form-group">
+                <button type="submit">Tambah Countdown</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="countdown-list" id="countdown-list">
+        <h2>Daftar Countdown</h2>
+        <div id="countdowns">
+            <!-- Countdown items will be added here -->
+            <div class="empty-state" id="empty-state">
+                Belum ada countdown. Silakan tambahkan countdown baru.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array untuk menyimpan semua countdown
+        let countdowns = JSON.parse(localStorage.getItem('countdowns')) || [];
+        let editingId = null;
+
+        // Fungsi untuk menyimpan countdowns ke localStorage
+        function saveCountdowns() {
+            localStorage.setItem('countdowns', JSON.stringify(countdowns));
+        }
+
+        // Fungsi untuk menambah countdown baru
+        document.getElementById('countdown-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+            
+            const targetDate = new Date(`${date}T${time}`);
+            
+            if (editingId !== null) {
+                // Update countdown yang sudah ada
+                const index = countdowns.findIndex(cd => cd.id === editingId);
+                if (index !== -1) {
+                    countdowns[index] = {
+                        id: editingId,
+                        title,
+                        targetDate: targetDate.toISOString()
+                    };
+                    editingId = null;
+                    document.getElementById('countdown-form').querySelector('button[type="submit"]').textContent = 'Tambah Countdown';
+                }
+            } else {
+                // Tambah countdown baru
+                const newCountdown = {
+                    id: Date.now(), // Gunakan timestamp sebagai ID unik
+                    title,
+                    targetDate: targetDate.toISOString()
+                };
+                countdowns.push(newCountdown);
+            }
+            
+            saveCountdowns();
+            renderCountdowns();
+            this.reset();
+        });
+
+        // Fungsi untuk menampilkan semua countdown
+        function renderCountdowns() {
+            const countdownsContainer = document.getElementById('countdowns');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (countdowns.length === 0) {
+                emptyState.style.display = 'block';
+                countdownsContainer.innerHTML = emptyState.outerHTML;
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            let html = '';
+            countdowns.forEach(countdown => {
+                const remaining = getTimeRemaining(countdown.targetDate);
+                
+                html += `
+                    <div class="countdown-item" data-id="${countdown.id}">
+                        <div class="countdown-info">
+                            <div class="countdown-title">${countdown.title}</div>
+                            <div class="countdown-time" id="time-${countdown.id}">
+                                ${remaining.days} hari, ${remaining.hours} jam, ${remaining.minutes} menit, ${remaining.seconds} detik
+                            </div>
+                        </div>
+                        <div class="countdown-actions">
+                            <button class="edit" onclick="editCountdown(${countdown.id})">Edit</button>
+                            <button class="delete" onclick="deleteCountdown(${countdown.id})">Hapus</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            countdownsContainer.innerHTML = html;
+        }
+
+        // Fungsi untuk menghitung waktu yang tersisa
+        function getTimeRemaining(endtime) {
+            const total = Date.parse(endtime) - Date.parse(new Date());
+            const seconds = Math.floor((total / 1000) % 60);
+            const minutes = Math.floor((total / 1000 / 60) % 60);
+            const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+            const days = Math.floor(total / (1000 * 60 * 60 * 24));
+            
+            return {
+                total,
+                days: days < 0 ? 0 : days,
+                hours: hours < 0 ? 0 : hours,
+                minutes: minutes < 0 ? 0 : minutes,
+                seconds: seconds < 0 ? 0 : seconds
+            };
+        }
+
+        // Fungsi untuk memperbarui semua countdown setiap detik
+        function updateCountdowns() {
+            countdowns.forEach(countdown => {
+                const timeElement = document.getElementById(`time-${countdown.id}`);
+                if (timeElement) {
+                    const remaining = getTimeRemaining(countdown.targetDate);
+                    timeElement.textContent = `${remaining.days} hari, ${remaining.hours} jam, ${remaining.minutes} menit, ${remaining.seconds} detik`;
+                }
+            });
+        }
+
+        // Fungsi untuk mengedit countdown
+        function editCountdown(id) {
+            const countdown = countdowns.find(cd => cd.id === id);
+            if (countdown) {
+                const targetDate = new Date(countdown.targetDate);
+                
+                document.getElementById('title').value = countdown.title;
+                document.getElementById('date').value = targetDate.toISOString().split('T')[0];
+                document.getElementById('time').value = targetDate.toTimeString().slice(0, 5);
+                
+                editingId = id;
+                document.getElementById('countdown-form').querySelector('button[type="submit"]').textContent = 'Perbarui Countdown';
+                
+                // Scroll ke form
+                document.getElementById('countdown-form').scrollIntoView({behavior: 'smooth'});
+            }
+        }
+
+        // Fungsi untuk menghapus countdown
+        function deleteCountdown(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus countdown ini?')) {
+                countdowns = countdowns.filter(cd => cd.id !== id);
+                saveCountdowns();
+                renderCountdowns();
+                
+                if (editingId === id) {
+                    document.getElementById('countdown-form').reset();
+                    document.getElementById('countdown-form').querySelector('button[type="submit"]').textContent = 'Tambah Countdown';
+                    editingId = null;
+                }
+            }
+        }
+
+        // Inisialisasi
+        renderCountdowns();
+        
+        // Update countdown setiap detik
+        setInterval(updateCountdowns, 1000);
+        
+        // Membuat fungsi global agar bisa dipanggil dari dalam HTML
+        window.editCountdown = editCountdown;
+        window.deleteCountdown = deleteCountdown;
+    </script>
+</body>
+</html>
